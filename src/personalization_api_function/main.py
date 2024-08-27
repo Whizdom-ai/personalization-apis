@@ -195,12 +195,16 @@ def resolve_filter_parameters(variation_config: Dict, user_id: str) -> Tuple:
     CloudFront headers and time-based constructs such weekday, weekend, time of day, and seasonality
     can be derived from the time of the request and the user's time zone.
     """
+
+    # Extract the stage from the event context
+    stage = app.current_event.request_context.stage
+
     filter_name = str(app.current_event.get_query_string_value(name="filter", default_value="")) or None
     filter_values = str(app.current_event.get_query_string_value(name="filterValues", default_value="")) or None
 
     filter_arn = None
     if filter_name:
-        filter_arn = f'arn:aws:personalize:{region}:{app.current_event.request_context.account_id}:filter/{filter_name}'
+        filter_arn = f'arn:aws:personalize:{region}:{app.current_event.request_context.account_id}:filter/{filter_name}-{stage}'
     elif variation_config.get('filters'):
         for filter in variation_config['filters']:
             condition = filter.get('condition')
