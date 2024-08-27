@@ -198,9 +198,13 @@ def resolve_filter_parameters(variation_config: Dict, user_id: str) -> Tuple:
 
     # Extract the stage from the event context
     stage = app.current_event.request_context.stage
+    logger.debug(f'resolve filter parameteres in {stage} environment')
 
     filter_name = str(app.current_event.get_query_string_value(name="filter", default_value="")) or None
     filter_values = str(app.current_event.get_query_string_value(name="filterValues", default_value="")) or None
+
+    logger.debug(f'filter name {filter_name} in {stage} environment')
+    logger.debug(f'filter values {filter_values} in {stage} environment')
 
     filter_arn = None
     if filter_name:
