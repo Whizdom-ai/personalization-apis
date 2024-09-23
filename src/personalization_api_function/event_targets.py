@@ -153,6 +153,14 @@ def process_targets(namespace: str, namespace_config: Dict, api_event: Dict):
             if not 'sentAt' in event:
                 event['sentAt'] = int(datetime.now().timestamp())
 
+    recommender = event_body.get('experimentConversions')[0].get('recommender')
+    if recommender == 'sports-for-you':
+        config_target_update = namespace_config.get('recommenders').get('recommend-items').get(recommender).get('eventTargets')[0]
+        for item in config_targets:
+            if item.get('type') == 'personalize-event-tracker':
+                item['trackingId'] = config_target_update.get('trackingId')
+                break
+
     targets: EventTarget = []
 
     for config_target in config_targets:
