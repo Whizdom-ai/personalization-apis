@@ -159,7 +159,8 @@ def process_conversions(namespace: str, namespace_config: Dict, api_event: Dict,
 
         experiments = recommender_config.get('experiments')
         if not experiments:
-            raise ConfigError(HTTPStatus.INTERNAL_SERVER_ERROR, 'ExperimentsNotFound', f'"experiments" not defined for recommender ("{recommender}")')
+            logger.error(f'"experiments" not defined for recommender ("{recommender}")')
+            return
 
         feature = conversion.get('feature')
         if feature:
