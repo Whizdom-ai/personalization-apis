@@ -73,7 +73,11 @@ class PersonalizeEventTracker(EventTarget):
         logger.debug('Calling put_events on Personalize event tracker %s', self.trackingId)
 
         try:
-            response = PersonalizeEventTracker._personalize_events.put_events(**event_body)
+            response = []
+            for i in range(0, len(event_body['eventList']), 10):
+                chunk = event_body.copy()
+                chunk['eventList'] = event_body['eventList'][i:i + 10]
+                response.append(PersonalizeEventTracker._personalize_events.put_events(**chunk))
             logger.debug(response)
         except ClientError as e:
             if e.response['Error']['Code'] == 'ThrottlingException':
