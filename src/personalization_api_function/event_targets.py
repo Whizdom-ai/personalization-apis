@@ -170,11 +170,11 @@ def process_targets(namespace: str, namespace_config: Dict, api_event: Dict):
         recommender = conversion.get('recommender')
         logger.debug('Processing event targets for recommender %s found in the event POST request', recommender)
 
-        for recommender, recommender_config in recommenders.items():
-            if 'eventTargets' in recommender_config:
-                for target in recommender_config['eventTargets']:
-                    if target not in config_targets:
-                        config_targets.append(target)
+        for recommender_group, recommenders in recommenders.items():
+            for recommender_name, recommender_config in recommenders.items():
+                if recommender_name == recommender and 'eventTargets' in recommender_config:
+                    for target in recommender_config['eventTargets']:
+                        config_targets = recommender_config['eventTargets']
 
         logger.debug('Final Event targets found: %s', config_targets)
 
