@@ -155,6 +155,10 @@
                         "variations": {
                             "$ref": "#/$defs/variations",
                             "description": "Variations for the recommender."
+                        },
+                        "eventTargets": {
+                            "$ref": "#/$defs/eventTargets",
+                            "description": "Destinations to send events to via the events API endpoint for a recommender"
                         }
                     },
                     "additionalProperties": false

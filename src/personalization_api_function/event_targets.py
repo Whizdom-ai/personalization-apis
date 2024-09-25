@@ -73,7 +73,11 @@ class PersonalizeEventTracker(EventTarget):
         logger.debug('Calling put_events on Personalize event tracker %s', self.trackingId)
 
         try:
-            response = PersonalizeEventTracker._personalize_events.put_events(**event_body)
+            response = []
+            for i in range(0, len(event_body['eventList']), 10):
+                chunk = event_body.copy()
+                chunk['eventList'] = event_body['eventList'][i:i + 10]
+                response.append(PersonalizeEventTracker._personalize_events.put_events(**chunk))
             logger.debug(response)
         except ClientError as e:
             if e.response['Error']['Code'] == 'ThrottlingException':
@@ -139,6 +143,12 @@ class KinesisFirehose(EventTarget):
 @tracer.capture_method
 def process_targets(namespace: str, namespace_config: Dict, api_event: Dict):
     config_targets = namespace_config.get('eventTargets')
+    logger.debug('Main Event targets: %s', config_targets)
+
+    recommenders = namespace_config.get('recommenders', {})
+    logger.debug('Recommenders in the namespace %s: %s', namespace, recommenders)
+
+
     if not config_targets:
         raise ConfigError(HTTPStatus.NOT_FOUND, 'NamespaceEventTargetsNotFound', 'No event targets are defined for this namespace path')
 
@@ -155,20 +165,33 @@ def process_targets(namespace: str, namespace_config: Dict, api_event: Dict):
 
     targets: EventTarget = []
 
-    for config_target in config_targets:
-        type = config_target.get('type')
+    # Process each event and map to the correct event target based on recommender
+    for conversion in event_body.get('experimentConversions', []):
+        recommender = conversion.get('recommender')
+        logger.debug('Processing event targets for recommender %s found in the event POST request', recommender)
 
-        if type == PERSONALIZE_EVENT_TRACKER:
-            if event_body.get('eventList'):
-                targets.append(PersonalizeEventTracker(config_target['trackingId']))
+        for recommender_group, recommenders in recommenders.items():
+            for recommender_name, recommender_config in recommenders.items():
+                if recommender_name == recommender and 'eventTargets' in recommender_config:
+                    for target in recommender_config['eventTargets']:
+                        config_targets = recommender_config['eventTargets']
+
+        logger.debug('Final Event targets found: %s', config_targets)
+
+        for config_target in config_targets:
+            type = config_target.get('type')
+
+            if type == PERSONALIZE_EVENT_TRACKER:
+                if event_body.get('eventList'):
+                    targets.append(PersonalizeEventTracker(config_target['trackingId']))
+                else:
+                    logger.warning('API event does not have any events ("eventList" missing or empty); skipping Personalize event tracker')
+            elif type == KINESIS_STREAM:
+                targets.append(KinesisStream(stream_name = config_target['streamName']))
+            elif type == KINESIS_FIREHOSE:
+                targets.append(KinesisFirehose(stream_name = config_target['streamName']))
             else:
-                logger.warning('API event does not have any events ("eventList" missing or empty); skipping Personalize event tracker')
-        elif type == KINESIS_STREAM:
-            targets.append(KinesisStream(stream_name = config_target['streamName']))
-        elif type == KINESIS_FIREHOSE:
-            targets.append(KinesisFirehose(stream_name = config_target['streamName']))
-        else:
-            raise ConfigError(f'Event target type {type} is unsupported')
+                raise ConfigError(f'Event target type {type} is unsupported')
 
     if len(targets) == 1:
         logger.debug('Just one event target %s; executing synchronously', config_targets[0])
