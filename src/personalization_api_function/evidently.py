@@ -159,7 +159,7 @@ def process_conversions(namespace: str, namespace_config: Dict, api_event: Dict,
 
         experiments = recommender_config.get('experiments')
         if not experiments:
-            logger.error(f'"experiments" not defined for recommender ("{recommender}")')
+            logger.warning(f'"experiments" not defined for recommender ("{recommender}")')
             return
 
         feature = conversion.get('feature')
