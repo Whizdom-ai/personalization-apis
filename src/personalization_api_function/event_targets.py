@@ -143,7 +143,11 @@ class KinesisFirehose(EventTarget):
 @tracer.capture_method
 def process_targets(namespace: str, namespace_config: Dict, api_event: Dict):
     config_targets = namespace_config.get('eventTargets')
+    logger.debug('Main Event targets: %s', config_targets)
+
     recommenders = namespace_config.get('recommenders', {})
+    logger.debug('Recommenders in the namespace %s: %s', namespace, recommenders)
+
 
     if not config_targets:
         raise ConfigError(HTTPStatus.NOT_FOUND, 'NamespaceEventTargetsNotFound', 'No event targets are defined for this namespace path')
@@ -164,12 +168,15 @@ def process_targets(namespace: str, namespace_config: Dict, api_event: Dict):
     # Process each event and map to the correct event target based on recommender
     for conversion in event_body.get('experimentConversions', []):
         recommender = conversion.get('recommender')
-        logger.debug('Processing event targets for recommender %s', recommender)
+        logger.debug('Processing event targets for recommender %s found in the event POST request', recommender)
 
-        recommender_config = recommenders.get(recommender, {})
+        for recommender, recommender_config in recommenders.items():
+            if 'eventTargets' in recommender_config:
+                for target in recommender_config['eventTargets']:
+                    if target not in config_targets:
+                        config_targets.append(target)
 
-        config_targets = recommender_config.get('eventTargets', config_targets)
-        logger.debug('Event targets: %s', config_targets)
+        logger.debug('Final Event targets found: %s', config_targets)
 
         for config_target in config_targets:
             type = config_target.get('type')
